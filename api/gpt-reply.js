@@ -30,6 +30,7 @@ module.exports = async function handler(req, res) {
         },
       }
     );
+    console.log("Using API key:", process.env.OPENROUTER_API_KEY ? "✅ Set" : "❌ Not Set");
 
     const reply = response.data.choices[0].message.content;
     res.status(200).json({ reply });
