@@ -19,14 +19,14 @@ module.exports = async function handler(req, res) {
 
   try {
     const completion = await openai.createChatCompletion({
-      model: "gpt-4",
+      model: "gpt-3.5-turbo",
       messages: [{ role: "user", content: message }],
     });
 
     const reply = completion.data.choices[0].message.content;
     res.status(200).json({ reply });
   } catch (err) {
-    console.error("GPT error:", err.message);
+    console.error("OpenAI error:", err.response?.data || err.message);
     res.status(500).json({ reply: "Sorry, AI is unavailable." });
   }
 };
