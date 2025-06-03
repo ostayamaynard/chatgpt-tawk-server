@@ -1,24 +1,31 @@
 const axios = require("axios");
 
 module.exports = async function handler(req, res) {
-  const { message } = req.body;
+  // Enable body parsing if needed (Vercel default is true)
+  if (req.method !== "POST") {
+    return res.status(405).send("Method Not Allowed");
+  }
 
-  if (!message) {
-    return res.status(400).json({ reply: "No message received." });
+  let message;
+  try {
+    message = req.body.message;
+    if (!message) throw new Error("Missing message");
+  } catch {
+    return res.status(400).json({ reply: "Invalid or missing message." });
   }
 
   try {
     const response = await axios.post(
       "https://openrouter.ai/api/v1/chat/completions",
       {
-        model: "mistralai/mistral-7b-instruct", // or try "openchat/openchat-7b"
+        model: "mistralai/mistral-7b-instruct",
         messages: [{ role: "user", content: message }],
       },
       {
         headers: {
           Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
           "Content-Type": "application/json",
-          "HTTP-Referer": "https://4evaglow.org", // your domain for attribution
+          "HTTP-Referer": "https://4evaglow.org",
           "X-Title": "4EvaGlow AI Chat Assistant",
         },
       }
