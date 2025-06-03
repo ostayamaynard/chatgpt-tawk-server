@@ -1,16 +1,6 @@
-const { Configuration, OpenAIApi } = require("openai");
-
-const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
-const openai = new OpenAIApi(configuration);
+const axios = require("axios");
 
 module.exports = async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).send("Method Not Allowed");
-  }
-
   const { message } = req.body;
 
   if (!message) {
@@ -18,15 +8,26 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const completion = await openai.createChatCompletion({
-      model: "gpt-3.5-turbo",
-      messages: [{ role: "user", content: message }],
-    });
+    const response = await axios.post(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        model: "mistralai/mistral-7b-instruct", // or try "openchat/openchat-7b"
+        messages: [{ role: "user", content: message }],
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://4evaglow.org", // your domain for attribution
+          "X-Title": "4EvaGlow AI Chat Assistant",
+        },
+      }
+    );
 
-    const reply = completion.data.choices[0].message.content;
+    const reply = response.data.choices[0].message.content;
     res.status(200).json({ reply });
   } catch (err) {
-    console.error("OpenAI error:", err.response?.data || err.message || err);
-    res.status(500).json({ reply: "Sorry, AI is unavailable." });
+    console.error("OpenRouter error:", err.response?.data || err.message);
+    res.status(500).json({ reply: "Sorry, AI is currently unavailable." });
   }
 };
