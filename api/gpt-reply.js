@@ -1,11 +1,22 @@
 const axios = require("axios");
 
 module.exports = async function handler(req, res) {
-  // Enable body parsing if needed (Vercel default is true)
+  // ✅ CORS headers (apply to all requests)
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  // ✅ Handle preflight (CORS) request
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  // ✅ Only allow POST requests
   if (req.method !== "POST") {
     return res.status(405).send("Method Not Allowed");
   }
 
+  // ✅ Validate request body
   let message;
   try {
     message = req.body.message;
@@ -15,6 +26,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
+    // ✅ Make request to OpenRouter
     const response = await axios.post(
       "https://openrouter.ai/api/v1/chat/completions",
       {
@@ -30,7 +42,6 @@ module.exports = async function handler(req, res) {
         },
       }
     );
-    console.log("Using API key:", process.env.OPENROUTER_API_KEY ? "✅ Set" : "❌ Not Set");
 
     const reply = response.data.choices[0].message.content;
     res.status(200).json({ reply });
