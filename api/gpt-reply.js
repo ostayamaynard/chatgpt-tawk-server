@@ -26,7 +26,7 @@ module.exports = async function handler(req, res) {
     const reply = completion.data.choices[0].message.content;
     res.status(200).json({ reply });
   } catch (err) {
-    console.error("OpenAI error:", err.response?.data || err.message);
+    console.error("OpenAI error:", err.response?.data || err.message || err);
     res.status(500).json({ reply: "Sorry, AI is unavailable." });
   }
 };
