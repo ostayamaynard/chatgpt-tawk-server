@@ -1,0 +1,8 @@
+{
+  "name": "chatgpt-tawk-server",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "openai": "^4.13.0"
+  }
+}
