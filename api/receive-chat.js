@@ -1,38 +1,31 @@
 const axios = require("axios");
 
 module.exports = async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).send("Method Not Allowed");
-  }
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(405).send("Method Not Allowed");
 
   try {
-    const body = req.body;
+    const { message } = req.body;
 
-    console.log("📥 Webhook Data Received:", JSON.stringify(body, null, 2));
+    const text = message?.text;
+    if (!text) return res.status(400).json({ error: "Missing visitor message text" });
 
-    // Extract the latest message from transcript
-    const lastMsg =
-      body?.transcript?.[body.transcript.length - 1]?.message?.trim();
+    // Forward to GPT endpoint
+    const gptResponse = await axios.post("https://chatgpt-tawk-server.vercel.app/api/gpt-reply", {
+      message: text,
+    });
 
-    if (!lastMsg) {
-      return res.status(200).json({ status: "No message found" });
-    }
+    const reply = gptResponse.data.reply;
+    console.log("🤖 GPT says:", reply);
 
-    // Send it to your GPT handler
-    const aiResponse = await axios.post(
-      "https://chatgpt-tawk-server.vercel.app/api/gpt-reply",
-      { message: lastMsg },
-      { headers: { "Content-Type": "application/json" } }
-    );
-
-    const reply = aiResponse.data.reply;
-    console.log("🤖 AI response:", reply);
-
-    // You could forward this back to Tawk here if you wish
-
-    res.status(200).json({ status: "OK", message: lastMsg, reply });
+    // Respond back to Tawk webhook
+    return res.status(200).json({ reply });
   } catch (err) {
-    console.error("❌ Webhook Error:", err.message);
-    res.status(500).json({ error: "Failed to process webhook" });
+    console.error("❌ Error in receive-chat:", err.message);
+    return res.status(500).json({ error: "Internal error" });
   }
 };
