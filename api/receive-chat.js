@@ -9,12 +9,26 @@ module.exports = async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).send("Method Not Allowed");
 
   try {
-    const { message } = req.body;
+    const payload = req.body;
 
-    const text = message?.text;
-    if (!text) return res.status(400).json({ error: "Missing visitor message text" });
+    console.log("📥 Raw Tawk Webhook Payload:", JSON.stringify(payload, null, 2));
 
-    // Forward to GPT endpoint
+    const transcript = payload?.data?.messages;
+    if (!transcript || transcript.length === 0) {
+      return res.status(400).json({ error: "No messages found in webhook payload" });
+    }
+
+    // Find latest visitor message
+    const lastVisitorMessage = transcript.reverse().find(msg => msg.senderType === "visitor");
+
+    if (!lastVisitorMessage) {
+      return res.status(400).json({ error: "No visitor message found" });
+    }
+
+    const text = lastVisitorMessage.message;
+    console.log("💬 Visitor message:", text);
+
+    // Send to GPT
     const gptResponse = await axios.post("https://chatgpt-tawk-server.vercel.app/api/gpt-reply", {
       message: text,
     });
@@ -22,10 +36,9 @@ module.exports = async function handler(req, res) {
     const reply = gptResponse.data.reply;
     console.log("🤖 GPT says:", reply);
 
-    // Respond back to Tawk webhook
     return res.status(200).json({ reply });
   } catch (err) {
-    console.error("❌ Error in receive-chat:", err.message);
+    console.error("❌ Error in receive-chat:", err.response?.data || err.message);
     return res.status(500).json({ error: "Internal error" });
   }
 };
