@@ -11,34 +11,38 @@ module.exports = async function handler(req, res) {
   try {
     const payload = req.body;
 
-    console.log("📥 Raw Tawk Webhook Payload:", JSON.stringify(payload, null, 2));
+    console.log("📩 Webhook received:", JSON.stringify(payload, null, 2));
 
     const transcript = payload?.data?.messages;
     if (!transcript || transcript.length === 0) {
-      return res.status(400).json({ error: "No messages found in webhook payload" });
+      console.log("⚠️ No messages in webhook");
+      return res.status(400).json({ error: "No messages in webhook payload" });
     }
 
-    // Find latest visitor message
-    const lastVisitorMessage = transcript.reverse().find(msg => msg.senderType === "visitor");
+    const lastVisitorMessage = transcript
+      .reverse()
+      .find((msg) => msg.senderType === "visitor");
 
-    if (!lastVisitorMessage) {
-      return res.status(400).json({ error: "No visitor message found" });
+    if (!lastVisitorMessage || !lastVisitorMessage.message) {
+      console.log("⚠️ No visitor message found");
+      return res.status(400).json({ error: "No valid visitor message" });
     }
 
-    const text = lastVisitorMessage.message;
-    console.log("💬 Visitor message:", text);
+    const messageText = lastVisitorMessage.message;
+    console.log("💬 Visitor said:", messageText);
 
-    // Send to GPT
-    const gptResponse = await axios.post("https://chatgpt-tawk-server.vercel.app/api/gpt-reply", {
-      message: text,
-    });
+    // Call GPT endpoint
+    const gptResponse = await axios.post(
+      "https://chatgpt-tawk-server.vercel.app/api/gpt-reply",
+      { message: messageText }
+    );
 
     const reply = gptResponse.data.reply;
     console.log("🤖 GPT says:", reply);
 
     return res.status(200).json({ reply });
   } catch (err) {
-    console.error("❌ Error in receive-chat:", err.response?.data || err.message);
-    return res.status(500).json({ error: "Internal error" });
+    console.error("❌ Server error:", err.message);
+    return res.status(500).json({ error: "Internal server error" });
   }
 };
