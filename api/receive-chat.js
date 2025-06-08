@@ -10,39 +10,27 @@ module.exports = async function handler(req, res) {
 
   try {
     const payload = req.body;
-
     console.log("📩 Webhook received:", JSON.stringify(payload, null, 2));
 
-    const transcript = payload?.data?.messages;
-    if (!transcript || transcript.length === 0) {
-      console.log("⚠️ No messages in webhook");
-      return res.status(400).json({ error: "No messages in webhook payload" });
+    const message = payload.message?.text;
+    const isVisitor = payload.message?.sender?.type === "visitor";
+
+    if (!message || !isVisitor) {
+      console.warn("⚠️ No valid visitor message found.");
+      return res.status(400).json({ error: "No valid visitor message." });
     }
 
-    const lastVisitorMessage = transcript
-      .reverse()
-      .find((msg) => msg.senderType === "visitor");
+    // Call GPT reply API
+    const gptRes = await axios.post("https://chatgpt-tawk-server.vercel.app/api/gpt-reply", {
+      message,
+    });
 
-    if (!lastVisitorMessage || !lastVisitorMessage.message) {
-      console.log("⚠️ No visitor message found");
-      return res.status(400).json({ error: "No valid visitor message" });
-    }
-
-    const messageText = lastVisitorMessage.message;
-    console.log("💬 Visitor said:", messageText);
-
-    // Call GPT endpoint
-    const gptResponse = await axios.post(
-      "https://chatgpt-tawk-server.vercel.app/api/gpt-reply",
-      { message: messageText }
-    );
-
-    const reply = gptResponse.data.reply;
-    console.log("🤖 GPT says:", reply);
+    const reply = gptRes.data.reply;
+    console.log("🤖 GPT Reply:", reply);
 
     return res.status(200).json({ reply });
   } catch (err) {
-    console.error("❌ Server error:", err.message);
-    return res.status(500).json({ error: "Internal server error" });
+    console.error("❌ Error processing webhook:", err.message);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 };
