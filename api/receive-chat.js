@@ -10,27 +10,32 @@ module.exports = async function handler(req, res) {
 
   try {
     const payload = req.body;
+
     console.log("📩 Webhook received:", JSON.stringify(payload, null, 2));
 
-    const message = payload.message?.text;
-    const isVisitor = payload.message?.sender?.type === "visitor";
+    const text = payload?.message?.text;
 
-    if (!message || !isVisitor) {
-      console.warn("⚠️ No valid visitor message found.");
-      return res.status(400).json({ error: "No valid visitor message." });
+    if (!text) {
+      console.warn("⚠️ No visitor message found in webhook.");
+      return res.status(400).json({ error: "No visitor message found" });
     }
 
-    // Call GPT reply API
+    // Send message to GPT API
     const gptRes = await axios.post("https://chatgpt-tawk-server.vercel.app/api/gpt-reply", {
-      message,
+      message: text,
+    }, {
+      headers: {
+        "Content-Type": "application/json"
+      }
     });
 
     const reply = gptRes.data.reply;
     console.log("🤖 GPT Reply:", reply);
 
+    // Respond to webhook
     return res.status(200).json({ reply });
   } catch (err) {
-    console.error("❌ Error processing webhook:", err.message);
-    return res.status(500).json({ error: "Internal Server Error" });
+    console.error("❌ Webhook handler error:", err.message);
+    return res.status(500).json({ error: "Internal error" });
   }
 };
